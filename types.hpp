@@ -22,6 +22,7 @@
 #include "Workers/ActionManagementWorker.hpp"
 #include "Workers/NN/BeyondMimicWorker.hpp"
 #include "Workers/NN/UnitreeRlLabVelocityInferenceWorker.hpp"
+#include "adapters/AmpV153InferenceWorker.hpp"
 #include "Workers/MITMotorControlWorker.hpp"
 
 #ifdef BUILD_SIMULATION
@@ -125,5 +126,4 @@ using ActionManagementWorkerType = z::ActionAndMotorPropertiesManagementWorker<S
 
 /******define actor net************/
 using BeyondMimicUnitreeInferWorkerType = z::BeyondMimicUnitreeInferenceWorker<SchedulerType, Net1Name, RealNumber, JOINT_NUMBER, DANCE_TRAJECTORY_LENGTH>;
-using UnitreeRlLabVelocityInferWorkerType = z::UnitreeRlLabVelocityInferenceWorker<SchedulerType, WalkNetName, RealNumber, 5, JOINT_NUMBER>; // stack 5 frames of history
-
+using UnitreeRlLabVelocityInferWorkerType = z::AmpV153InferenceWorker<SchedulerType, WalkNetName, RealNumber, JOINT_ID_MAP>; // Preserve framework order; adapter handles v153 actor order.
