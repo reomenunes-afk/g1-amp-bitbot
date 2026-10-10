@@ -100,13 +100,17 @@ constexpr z::CTSPair<z::concat(WalkNetName, "InferenceTime"), RealNumber> WalkIn
 constexpr z::CTSPair<z::concat(WalkNetName, "NetProjectedGravity"), Vec3> WalkNetProjectedGravityPair;
 constexpr z::CTSPair<z::concat(WalkNetName, "NetUserCommand3"), Vec3> WalkNetUserCommand3Pair;
 
+// HeadingStatus = target yaw, measured yaw, wrapped error (radians).
+constexpr z::CTSPair<z::concat(WalkNetName, "HeadingStatus"), Vec3> WalkHeadingStatusPair;
+constexpr z::CTSPair<z::concat(WalkNetName, "PolicyCommand3"), Vec3> WalkPolicyCommandPair;
+
 // define scheduler
 using SchedulerType = z::AbstractScheduler<ImuAccRawPair, ImuGyroRawPair, ImuMagRawPair,
     ImuAccFilteredPair, ImuGyroFilteredPair, ImuMagFilteredPair,
     TargetMotorPosPair, TargetMotorVelPair, CurrentMotorPosPair, CurrentMotorVelPair, CurrentMotorTorquePair,
     TargetMotorTorquePair, TargetMotorDampingPair, TargetMotorStiffnessPair,
     NetLastActionPair, InferenceTimePair, DanceNet1OutPair, Net1RefTrajPair, Net1RefVelPair, ImuAlterAngleFilteredPair,
-    WalkNetLastActionPair, WalkNet1OutPair, WalkInferenceTimePair, WalkNetProjectedGravityPair, WalkNetUserCommand3Pair>;
+    WalkNetLastActionPair, WalkNet1OutPair, WalkInferenceTimePair, WalkNetProjectedGravityPair, WalkNetUserCommand3Pair, WalkHeadingStatusPair, WalkPolicyCommandPair>;
 
 
 //define workers
@@ -119,7 +123,7 @@ using LoggerWorkerType = z::AsyncLoggerWorker<SchedulerType, RealNumber, ImuAccR
     TargetMotorPosPair, TargetMotorVelPair, CurrentMotorPosPair, CurrentMotorVelPair, CurrentMotorTorquePair,
     TargetMotorTorquePair, TargetMotorDampingPair, TargetMotorStiffnessPair,
     NetLastActionPair, InferenceTimePair, DanceNet1OutPair, Net1RefTrajPair, Net1RefVelPair, ImuAlterAngleFilteredPair,
-    WalkNetLastActionPair, WalkNet1OutPair, WalkInferenceTimePair, WalkNetProjectedGravityPair, WalkNetUserCommand3Pair>;
+    WalkNetLastActionPair, WalkNet1OutPair, WalkInferenceTimePair, WalkNetProjectedGravityPair, WalkNetUserCommand3Pair, WalkHeadingStatusPair, WalkPolicyCommandPair>;
 
 using CmdWorkerType = z::NetCmdWorker<SchedulerType, RealNumber, WalkNetUserCommand3Pair>;
 using ActionManagementWorkerType = z::ActionAndMotorPropertiesManagementWorker<SchedulerType, RealNumber, DanceNet1OutPair, WalkNet1OutPair>;

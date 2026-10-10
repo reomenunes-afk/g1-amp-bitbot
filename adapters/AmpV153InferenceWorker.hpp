@@ -4,6 +4,8 @@
 #include "Workers/NN/NetInferenceWorker.h"
 #include "Utils/ZenBuffer.hpp"
 #include "Utils/StaticStringUtils.hpp"
+#include "HeadingFeedback.hpp"
+#include <atomic>
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -49,12 +51,30 @@ public:
         const auto& scales = pre["CommandScales"];
         if (scales.size() != 3) throw std::runtime_error("AMP requires three command scales");
         for (size_t i = 0; i < 3; ++i) command_scales_[i] = scales[i].template get<Scalar>();
+        if (pre.contains("HeadingFeedback")) {
+            const auto& h = pre["HeadingFeedback"];
+            heading_.enabled = h.value("Enabled", false);
+            heading_.kp = h.value("Kp", Scalar(.5));
+            heading_.limit = h.value("YawRateLimit", Scalar(.2));
+            if (!std::isfinite(heading_.kp) || heading_.kp < 0 ||
+                !std::isfinite(heading_.limit) || heading_.limit <= 0)
+                throw std::runtime_error("Invalid heading feedback gains");
+        }
+        heading_config_enabled_ = heading_.enabled;
+        std::cout << "Heading feedback enabled=" << heading_config_enabled_
+                  << " kp=" << heading_.kp << " limit=" << heading_.limit << std::endl;
         clip_targets_ = net_cfg["Postprocess"].value("clip_joint_targets", false);
         this->InputOrtTensors__.push_back(this->WarpOrtTensor(input_));
         this->OutputOrtTensors__.push_back(this->WarpOrtTensor(output_));
     }
 
-    void PreProcess() override
+    // Called on mode transitions. Consume reset on the inference thread.
+    void SetHeadingControlActive(bool active) {
+        heading_active_.store(active);
+        heading_reset_.store(true);
+    }
+
+    void PreProcess() override   //构造网络输入 15 帧 × 98 维 拼成 1470 维
     {
         start_ = std::chrono::steady_clock::now();
         Joints q, dq, previous_action;
@@ -65,6 +85,15 @@ public:
         this->Scheduler->template GetData<concat(NetName, "NetUserCommand3")>(command);
         this->Scheduler->template GetData<"AngleVelocityValue">(gyro);
         this->Scheduler->template GetData<"AngleValue">(rpy);
+        if (heading_reset_.exchange(false)) heading_.Reset();
+        heading_.enabled = heading_config_enabled_ && heading_active_.load();
+        const Scalar corrected = heading_.Update(rpy[2], command[2], policy_dt_);
+        // target after Update refers to the next instant; log current target.
+        const Vec3 heading_status = {HeadingFeedback<Scalar>::Wrap(rpy[2] + heading_.error),
+                                     rpy[2], heading_.error};
+        command[2] = corrected; // local copy: never overwrite NetUserCommand3
+        this->Scheduler->template SetData<concat(NetName, "HeadingStatus")>(heading_status);
+        this->Scheduler->template SetData<concat(NetName, "PolicyCommand3")>(command);
         // RPY is in radians, body-to-world R=Rz(yaw)Ry(pitch)Rx(roll).
         // The actor receives R^T*[0,0,-1], never the Euler angles themselves.
         const Vec3 gravity = ComputeProjectedGravity(rpy);
@@ -97,7 +126,7 @@ public:
         ++policy_step_;
     }
 
-    void PostProcess() override
+    void PostProcess() override  //把网络输出变成目标角。 关节目标角 = 默认关节角 + action_scale × 网络 action
     {
         const auto action = Joints::clamp(output_.toVector(), -this->ClipAction, this->ClipAction);
         this->Scheduler->template SetData<concat(NetName, "NetLastAction")>(action);
@@ -115,6 +144,9 @@ private:
     math::Tensor<Scalar, 1, 1470> input_;
     math::Tensor<Scalar, 1, 29> output_;
     RingBuffer<Frame> history_;
+    HeadingFeedback<Scalar> heading_;
+    bool heading_config_enabled_ = false;
+    std::atomic<bool> heading_active_{false}, heading_reset_{true};
     std::array<size_t, 29> actor_to_framework_{};
     Vec3 command_scales_;
     Scalar policy_dt_ = Scalar(0.01), cycle_time_ = Scalar(0.64);

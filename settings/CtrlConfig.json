@@ -288,17 +288,23 @@
         "IntraNumberThreads": 1
       },
       "Network": {
-        "ModelPath": "CheckPoints/amp_v153_projected_gravity_model_2500.onnx",
-        "Cycle_time": 0.64,
+        "ModelPath": "CheckPoints/v311_2200.onnx",
+        "Cycle_time": 1.295,
         "InputNodeNames": [
-          "obs"
+          "input"
         ],
         "OutputNodeNames": [
-          "actions"
+          "output"
         ]
       },
+
       "Preprocess": {
         "PolicyDt": 0.01,
+        "HeadingFeedback": {
+          "Enabled": true,
+          "Kp": 0.5,
+          "YawRateLimit": 0.2
+        },
         "UseAlterImu": false,
         "CommandScales": [
           2,
