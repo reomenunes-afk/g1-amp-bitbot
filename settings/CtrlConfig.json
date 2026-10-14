@@ -288,7 +288,7 @@
         "IntraNumberThreads": 1
       },
       "Network": {
-        "ModelPath": "CheckPoints/v311_2200.onnx",
+        "ModelPath": "CheckPoints/v357_1600.onnx",
         "Cycle_time": 1.295,
         "InputNodeNames": [
           "input"
